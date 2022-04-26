@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Lab 3</title>
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="style.css" />
+  </head>
+
+  <body>
+    <form>
+      <b style="font-size: 16px">John's activities:</b><br />
+      <br />
+      <input
+        type="text"
+        name="sequence1"
+        id="seq"
+        onkeyup="input(this);"
+        value="game,surf,beach,study,beach,study,beach"
+        style="width: 80vw; font-size: 16px"
+      /><br /><br />
+    </form>
+    <div style="width: 98%; text-align: center">
+      <h1>Viterbi Method:</h1>
+    </div>
+    <div class="table"></div>
+    <br />
+    <div style="width: 98%; text-align: center; display: none">
+      <h1>Forward Method:</h1>
+      <br />
+      <b>Probability P(S): </b><span id="probability"></span>
+    </div>
+    <br />
+    <br />
+    <br />
+
+    <div class="footer">
+      Deep Structured Machine Learning - Lab 2 - Afonso Raposo
+    </div>
+  </body>
+  <script src="lab3.js"></script>
+</html>
