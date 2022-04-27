@@ -62,54 +62,13 @@ function viterbi(obs, states, start_p, trans_p, emit_p) {
     createTable(obs, states, V, opt, min_prob); // doesn't matter
 }
 
-// The magic happens here
-function forwardBackward(obs, states, start_p, trans_p, emit_p) {
-
-    var F = [{}]; // initiate the array where we'll save the values for the Forward Method
-    states.forEach(function (st) { // calculate the probability for each state (first column)
-        F[0][st] = { "prob": trans_p['rainy'][st] * emit_p[st][obs[0]], "prev": "rainy" };
-    });
-
-    // Run Viterbi when t > 0
-    for (var t = 2; t < obs.length; t++) {
-        F.push({});
-        states.forEach(function (st) { // for each state (1, 2 or 3)
-            f_tr_prob = F[t - 1][states[0]]["prob"] * trans_p[states[0]][st]; // calculate the probability of the first previous state (forward method)
-            states.slice(1).forEach(function (prev_st) { // for each of the remaining states exclude the first one, since the probability was already computed
-                f_tr_prob += F[t - 1][prev_st]["prob"] * trans_p[prev_st][st]; // sum the probability of each previous state
-            })
-            f_prob = f_tr_prob * emit_p[st][obs[t]]; // multiply the sum of probabilities of the previous observation with the emission probability
-            F[t][st] = { "prob": f_prob }; // append to the F array
-        })
-    }
-
-    var B = [{}]; // initiate the array where we'll save the values for the Backward Method
-    states.forEach(function (st) { // calculate the probability for each state (first column)
-        B[0][st] = { "prob": trans_p[st]['sunny'] };
-    });
-
-    for (var t = obs.length - 2; t >= 0; t++) {
-        F.unshift({});
-        states.forEach(function (st) { // for each state (1, 2 or 3)
-            f_tr_prob = F[1][states[0]]["prob"] * trans_p[states[0]][st]; // calculate the probability of the first previous state (forward method)
-            states.slice(1).forEach(function (prev_st) { // for each of the remaining states exclude the first one, since the probability was already computed
-                f_tr_prob += F[t - 1][prev_st]["prob"] * trans_p[prev_st][st]; // sum the probability of each previous state
-            })
-            f_prob = f_tr_prob * emit_p[st][obs[t]]; // multiply the sum of probabilities of the previous observation with the emission probability
-            F[0][st] = { "prob": f_prob }; // append to the F array
-        })
-    }
-    //console.log('The steps of states are ' + opt + ' with highest probability of ' + Math.pow(10, max_prob))
-    //createTable(obs, states, V, opt, min_prob); // doesn't matter
-    //$('#probability').html(F_max_prob.toExponential(2)); // prints the probability P(S)
-}
 
 function createTable(obs, states, V, opt, min_prob) {
     var val, table = '<table align="center">';
     var opacity = ['FC', 'FA', 'F7', 'F5', 'F2', 'F0', 'ED', 'EB', 'E8', 'E6', 'E3', 'E0', 'DE', 'DB', 'D9', 'D6', 'D4', 'D1', 'CF', 'CC', 'C9', 'C7', 'C4', 'C2', 'BF', 'BD', 'BA', 'B8', 'B5', 'B3', 'B0', 'AD', 'AB', 'A8', 'A6', 'A3', 'A1', '9E', '9C', '99', '96', '94', '91', '8F', '8C', '8A', '87', '85', '82', '80', '7D', '7A', '78', '75', '73', '70', '6E', '6B', '69', '66', '63', '61', '5E', '5C', '59', '57', '54', '52', '4F', '4D', '4A', '47', '45', '42', '40', '3D', '3B', '38', '36', '33', '30', '2E', '2B', '29', '26', '24', '21', '1F', '1C', '1A', '17', '14', '12', '0F', '0D', '0A', '08', '05', '03', '00']
 
 
-    table += '<tr><td></td><td></td>';
+    table += '<tr><td></td>';
     for (var j = 0; j < obs.length; j++) {
         table += '<td align="center">' + obs[j] + '</td>';
     }
@@ -121,14 +80,12 @@ function createTable(obs, states, V, opt, min_prob) {
         for (var o = 0; o < obs.length; o++) {
             if (o == 0) {
                 table += '<td align="center">' + states[s] + '</td>';
-                let val = start_p[states[s]];
-                if (val == 1) {
-                    table += '<td align="center" class="prob black path" bgcolor="#000" style="color:#FFF">' + val + '</td>';
-
-                } else {
-
-                    table += '<td align="center" class="prob black" bgcolor="#dedede">' + val + '</td>';
-                }
+                // let val = start_p[states[s]];
+                // if (val == 1) {
+                //     table += '<td align="center" class="prob black path" bgcolor="#000" style="color:#FFF">' + val + '</td>';
+                // } else {
+                //     table += '<td align="center" class="prob black" bgcolor="#dedede">' + val + '</td>';
+                // }
             }
 
             var cla = "";
@@ -167,34 +124,34 @@ function createTable(obs, states, V, opt, min_prob) {
             }
 
         }
-        if (s == 0) {
-            table += '<td align="center" class="prob ' + cla + '" bgcolor="' + c + '" style="color:' + c2 + '">' + Math.exp(val).toExponential(2) + '</td>';
-        } else {
-            var v2 = Math.round(0 / min_prob);
-            var c2;
-            if (v2 > 0.5) {
-                c2 = "#000000";
-            } else {
-                c2 = "#FFFFFF";
-            }
-            var v = opacity[Math.round((opacity.length - 1) - (opacity.length - 1) * 0 / min_prob)];
-            var c = "#" + v + v + v;
-            table += '<td align="center" class="prob ' + cla + '" bgcolor="#dedede" style="color:#000">' + 0 + '</td>';
-        }
-        table += '</tr>';
+        // if (s == 0) {
+        //     table += '<td align="center" class="prob ' + cla + '" bgcolor="' + c + '" style="color:' + c2 + '">' + Math.exp(val).toExponential(2) + '</td>';
+        // } else {
+        //     var v2 = Math.round(0 / min_prob);
+        //     var c2;
+        //     if (v2 > 0.5) {
+        //         c2 = "#000000";
+        //     } else {
+        //         c2 = "#FFFFFF";
+        //     }
+        //     var v = opacity[Math.round((opacity.length - 1) - (opacity.length - 1) * 0 / min_prob)];
+        //     var c = "#" + v + v + v;
+        //     table += '<td align="center" class="prob ' + cla + '" bgcolor="#dedede" style="color:#000">' + 0 + '</td>';
+        // }
+        // table += '</tr>';
     }
 
     table += '<tr><td><b>Path &pi;*</b></td>';
-    table += '<td align="center" class="pi" bgcolor="#BFE3B4">rainy</td>';
+    // table += '<td align="center" class="pi" bgcolor="#BFE3B4">rainy</td>';
     for (var j = 0; j < opt.length; j++) {
         table += '<td align="center" class="pi" bgcolor="#BFE3B4">' + opt[j] + '</td>';
     }
-    table += '<td align="center" class="pi" bgcolor="#BFE3B4">sunny</td>';
+    // table += '<td align="center" class="pi" bgcolor="#BFE3B4">sunny</td>';
     table += '</tr>';
 
     table += '<tr><td>Day</td>';
-    day = 7;
-    for (var j = 0; j < opt.length + 2; j++) {
+    day = 8;
+    for (var j = 0; j < opt.length; j++) {
         table += '<td align="center">' + day++ + '</td>';
     }
     table += '</tr>';
