@@ -1,7 +1,7 @@
 const indices = ["surf", "beach", "game", "study"];
 function input(t) { // verify the input sequence (and protect)
     const values = t.value.trim().split(",").filter((value) => indices.includes(value));
-    if (values.length == 7) {
+    if (values.length > 0) {
         viterbi(values, states, start_p, trans_p, emit_p);
     }
 }
@@ -12,38 +12,28 @@ function viterbi(obs, states, start_p, trans_p, emit_p) {
     var V = [{}]; // initiate the array where we'll save the values for the Viterbi Method
     var F = [{}]; // initiate the array where we'll save the values for the Forward Method
     states.forEach(function (st) { // calculate the probability for each state (first column)
-        V[0][st] = { "prob": Math.log(start_p[st]), "prev": null };
-        F[0][st] = { "prob": start_p[st] };
+        V[0][st] = { "prob": Math.log(start_p['rainy']) + Math.log(trans_p['rainy'][st]) + Math.log(emit_p[st][obs[0]]), "prev": "rainy" };
     });
     // V[0] = [{'sunny': {prob: X, prev: null}, 'windy': {prob: X, prev: null}, 'rainy': {prob: X, prev: null}, } ]
 
     // Run Viterbi when t > 0
-    for (var t = 1; t < obs.length + 1; t++) {
+    for (var t = 1; t < obs.length; t++) {
         V.push({});
-        F.push({});
         states.forEach(function (st) { // for each state (1, 2 or 3)
             prev_st_selected = states[0]; // current maximum previous state
             max_tr_prob = V[t - 1][states[0]]["prob"] + Math.log(trans_p[states[0]][st]); // calculate the probability if the previous state is the first one
-            f_tr_prob = F[t - 1][states[0]]["prob"] * trans_p[states[0]][st]; // calculate the probability of the first previous state (forward method)
             states.slice(1).forEach(function (prev_st) { // for each of the remaining states exclude the first one, since the probability was already computed
                 tr_prob = V[t - 1][prev_st]["prob"] + Math.log(trans_p[prev_st][st]); // calculate the probability for each previous state
                 if (tr_prob > max_tr_prob) { // compare to select the maximum of it
                     max_tr_prob = tr_prob;
                     prev_st_selected = prev_st; // update the maximum previous state
                 }
-                f_tr_prob += F[t - 1][prev_st]["prob"] * trans_p[prev_st][st]; // sum the probability of each previous state
             })
-            max_prob = max_tr_prob + Math.log(emit_p[st][obs[t - 1]]); // multiply the maximum probability of the previous observation with the emission probability
-            f_prob = f_tr_prob * emit_p[st][obs[t - 1]]; // multiply the sum of probabilities of the previous observation with the emission probability
+            max_prob = max_tr_prob + Math.log(emit_p[st][obs[t]]); // multiply the maximum probability of the previous observation with the emission probability
             V[t][st] = { "prob": max_prob, "prev": prev_st_selected }; // append to the V matrix
-            F[t][st] = { "prob": f_prob }; // append to the F array
         })
     }
 
-    var F_max_prob = 0; // sum of all probabilities of the last observatiom
-    states.forEach(function (st) {
-        F_max_prob += F[F.length - 1][st]["prob"];
-    })
 
     // The highest probability
     var max_prob = - Infinity;
@@ -63,15 +53,55 @@ function viterbi(obs, states, start_p, trans_p, emit_p) {
     opt.unshift(previous) // prepend the last state
 
     // Follow the backtrack till the first observation
-    for (var t = V.length - 2; t > -1; t--) {
-        opt.unshift(V[t + 1][previous]['prev']) // prepend the state
-        previous = V[t + 1][previous]['prev']
+    for (var t = V.length - 1; t >= 1; t--) {
+        previous = V[t][previous]['prev']
+        opt.unshift(previous) // prepend the state
     }
 
-    console.log('The steps of states are ' + opt + ' with highest probability of ' + Math.pow(10, max_prob))
     //print 'The steps of states are ' + ' '.join(opt) + ' with highest probability of %s' % max_prob
     createTable(obs, states, V, opt, min_prob); // doesn't matter
-    $('#probability').html(F_max_prob.toExponential(2)); // prints the probability P(S)
+}
+
+// The magic happens here
+function forwardBackward(obs, states, start_p, trans_p, emit_p) {
+
+    var F = [{}]; // initiate the array where we'll save the values for the Forward Method
+    states.forEach(function (st) { // calculate the probability for each state (first column)
+        F[0][st] = { "prob": trans_p['rainy'][st] * emit_p[st][obs[0]], "prev": "rainy" };
+    });
+
+    // Run Viterbi when t > 0
+    for (var t = 2; t < obs.length; t++) {
+        F.push({});
+        states.forEach(function (st) { // for each state (1, 2 or 3)
+            f_tr_prob = F[t - 1][states[0]]["prob"] * trans_p[states[0]][st]; // calculate the probability of the first previous state (forward method)
+            states.slice(1).forEach(function (prev_st) { // for each of the remaining states exclude the first one, since the probability was already computed
+                f_tr_prob += F[t - 1][prev_st]["prob"] * trans_p[prev_st][st]; // sum the probability of each previous state
+            })
+            f_prob = f_tr_prob * emit_p[st][obs[t]]; // multiply the sum of probabilities of the previous observation with the emission probability
+            F[t][st] = { "prob": f_prob }; // append to the F array
+        })
+    }
+
+    var B = [{}]; // initiate the array where we'll save the values for the Backward Method
+    states.forEach(function (st) { // calculate the probability for each state (first column)
+        B[0][st] = { "prob": trans_p[st]['sunny'] };
+    });
+
+    for (var t = obs.length - 2; t >= 0; t++) {
+        F.unshift({});
+        states.forEach(function (st) { // for each state (1, 2 or 3)
+            f_tr_prob = F[1][states[0]]["prob"] * trans_p[states[0]][st]; // calculate the probability of the first previous state (forward method)
+            states.slice(1).forEach(function (prev_st) { // for each of the remaining states exclude the first one, since the probability was already computed
+                f_tr_prob += F[t - 1][prev_st]["prob"] * trans_p[prev_st][st]; // sum the probability of each previous state
+            })
+            f_prob = f_tr_prob * emit_p[st][obs[t]]; // multiply the sum of probabilities of the previous observation with the emission probability
+            F[0][st] = { "prob": f_prob }; // append to the F array
+        })
+    }
+    //console.log('The steps of states are ' + opt + ' with highest probability of ' + Math.pow(10, max_prob))
+    //createTable(obs, states, V, opt, min_prob); // doesn't matter
+    //$('#probability').html(F_max_prob.toExponential(2)); // prints the probability P(S)
 }
 
 function createTable(obs, states, V, opt, min_prob) {
@@ -88,9 +118,17 @@ function createTable(obs, states, V, opt, min_prob) {
     for (var s = 0; s < states.length; s++) {
 
         table += '<tr>';
-        for (var o = 0; o < obs.length + 1; o++) {
+        for (var o = 0; o < obs.length; o++) {
             if (o == 0) {
                 table += '<td align="center">' + states[s] + '</td>';
+                let val = start_p[states[s]];
+                if (val == 1) {
+                    table += '<td align="center" class="prob black path" bgcolor="#000" style="color:#FFF">' + val + '</td>';
+
+                } else {
+
+                    table += '<td align="center" class="prob black" bgcolor="#dedede">' + val + '</td>';
+                }
             }
 
             var cla = "";
@@ -98,11 +136,8 @@ function createTable(obs, states, V, opt, min_prob) {
                 cla = "path";
             }
 
-            if (o == 0) {
-                val = start_p[states[s]]
-            } else {
-                val = V[o][states[s]]['prob'];
-            }
+            val = start_p[states[s]]
+            val = V[o][states[s]]['prob'];
             if (val == -Infinity) {
                 table += '<td align="center" class="prob black ' + cla + '" bgcolor="#FFFFFF">' + 0 + '</td>';
             } else {
@@ -118,10 +153,12 @@ function createTable(obs, states, V, opt, min_prob) {
                 // table += '<td align="center" class="prob ' + cla + '" bgcolor="' + c + '" style="color:' + c2 + '">' + Math.pow(10, val).toExponential(2) + '</td>';
                 if (val == 0 || val == 1) {
                     if (val > 0.5) {
-                        c2 = "#000000";
-                    } else {
                         c2 = "#FFFFFF";
+                    } else {
+                        c2 = "#000000";
                     }
+                    var v = opacity[Math.round((opacity.length - 1) - (opacity.length - 1) * (1 - val) / min_prob)];
+                    var c = "#" + v + v + v;
                     table += '<td align="center" class="prob ' + cla + '" bgcolor="' + c + '" style="color:' + c2 + '">' + val + '</td>';
                 } else {
 
@@ -142,12 +179,13 @@ function createTable(obs, states, V, opt, min_prob) {
             }
             var v = opacity[Math.round((opacity.length - 1) - (opacity.length - 1) * 0 / min_prob)];
             var c = "#" + v + v + v;
-            table += '<td align="center" class="prob ' + cla + '" bgcolor="' + c + '" style="color:#FFFFFF">' + 0 + '</td>';
+            table += '<td align="center" class="prob ' + cla + '" bgcolor="#dedede" style="color:#000">' + 0 + '</td>';
         }
         table += '</tr>';
     }
 
     table += '<tr><td><b>Path &pi;*</b></td>';
+    table += '<td align="center" class="pi" bgcolor="#BFE3B4">rainy</td>';
     for (var j = 0; j < opt.length; j++) {
         table += '<td align="center" class="pi" bgcolor="#BFE3B4">' + opt[j] + '</td>';
     }
@@ -156,7 +194,7 @@ function createTable(obs, states, V, opt, min_prob) {
 
     table += '<tr><td>Day</td>';
     day = 7;
-    for (var j = 0; j < opt.length + 1; j++) {
+    for (var j = 0; j < opt.length + 2; j++) {
         table += '<td align="center">' + day++ + '</td>';
     }
     table += '</tr>';
@@ -172,9 +210,9 @@ var states = ['sunny', 'windy', 'rainy'];
 var start_p = { 'sunny': 0, 'windy': 0, 'rainy': 1 };
 var stop_p = { 'sunny': 1, 'windy': 0, 'rainy': 0 };
 var trans_p = {
-    'sunny': { 'sunny': 0.6, 'windy': 0.3, 'rainy': 0.2 },
-    'windy': { 'sunny': 0.3, 'windy': 0.5, 'rainy': 0.3 },
-    'rainy': { 'sunny': 0.1, 'windy': 0.2, 'rainy': 0.5 }
+    'sunny': { 'sunny': 0.6, 'windy': 0.3, 'rainy': 0.1 },
+    'windy': { 'sunny': 0.3, 'windy': 0.5, 'rainy': 0.2 },
+    'rainy': { 'sunny': 0.2, 'windy': 0.3, 'rainy': 0.5 }
 };
 var emit_p = {
     'sunny': { 'surf': 0.4, 'beach': 0.4, 'game': 0.1, 'study': 0.1 },
